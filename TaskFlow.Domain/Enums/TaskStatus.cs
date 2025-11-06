@@ -4,9 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TaskFlow.Domain
+namespace TaskFlow.Domain.Enums
 {
-    public class Class1
+    public enum TaskStatus
     {
+        Todo,
+        InProgress,
+        Done
     }
 }
