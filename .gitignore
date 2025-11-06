@@ -1,3 +1,99 @@
+# ========================================
+# .gitignore para proyectos .NET (TaskFlow)
+# ========================================
+
+## Archivos de usuario / configuración local
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+## Build / compilación
+bin/
+obj/
+[Bb]uild/
+[Ll]og/
+[Ll]ogs/
+out/
+
+## Archivos temporales de Visual Studio
+.vs/
+.vscode/
+*.ncb
+*.aps
+*.pch
+*.pdb
+*.opendb
+*.tlog
+*.lastcodeanalysissucceeded
+*.cache
+*.dbmdl
+*.VC.db
+*.VC.opendb
+
+## Archivos de publicación
+publish/
+wwwroot/
+app.publish/
+*.publish.xml
+*.pubxml
+*.pubxml.user
+
+## Archivos de entorno y secretos
+.env
+*.env
+secrets.json
+appsettings.Development.json
+
+## Paquetes y dependencias
+*.nupkg
+*.snupkg
+*.nuget.props
+*.nuget.targets
+packages/
+node_modules/
+
+## Archivos de migración generados por EF (pueden incluirse manualmente si querés)
+Migrations/
+*.bak
+
+## Docker / contenedores
+docker-compose.override.yml
+*.pid
+*.tar
+*.log
+
+## Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+## Archivos de pruebas
+TestResults/
+*.coverage
+*.coveragexml
+*.testsettings
+*.trx
+
+## Cache de Rider / ReSharper
+.idea/
+_ReSharper*/
+*.DotSettings.user
+
+## Archivos de Angular (si agregás front-end)
+dist/
+.angular/
+*.tsbuildinfo
+
+## Otros
+*.swp
+*.tmp
+*.bak
+*.old
+
+
 # Prerequisites
 *.d
 
