@@ -8,8 +8,8 @@ namespace TaskFlow.Domain.Enums
 {
     public enum TaskStatus
     {
-        Todo,
-        InProgress,
-        Done
+        Todo = 0,
+        InProgress = 1,
+        Done = 2
     }
 }
