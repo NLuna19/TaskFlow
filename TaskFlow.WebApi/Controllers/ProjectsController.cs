@@ -20,31 +20,52 @@ namespace TaskFlow.WebApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Project>>> GetProjects()
         {
-            return await _context.Projects.ToListAsync();
+            try
+            {
+                var projects = await _context.Projects.ToListAsync();
+                return Ok(projects);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal service error: {ex.Message}");
+            }
         }
 
         // GET: api/projects/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<Project>> GetProject(int id)
         {
-            var project = await _context.Projects
-                .Include(p => p.Tasks)
-                .FirstOrDefaultAsync(p => p.Id == id);
+            try
+            {
+                var project = await _context.Projects
+                 .Include(p => p.Tasks)
+                 .FirstOrDefaultAsync(p => p.Id == id);
 
-            if (project == null)
-                return NotFound();
+                if (project == null)
+                    return NotFound();
+                 return Ok(project);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
 
-            return project;
         }
 
         // POST: api/projects
         [HttpPost]
         public async Task<ActionResult<Project>> PostProject(Project project)
         {
-            _context.Projects.Add(project);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
+            try
+            {
+                _context.Projects.Add(project);
+                await _context.SaveChangesAsync();
+                return Ok(project);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         // PUT: api/projects/{id}
@@ -52,37 +73,46 @@ namespace TaskFlow.WebApi.Controllers
         public async Task<IActionResult> PutProject(int id, Project project)
         {
             if (id != project.Id)
-                return BadRequest();
-
-            _context.Entry(project).State = EntityState.Modified;
+                return BadRequest("El ID del proyecto no coincide.");
 
             try
             {
+                _context.Entry(project).State = EntityState.Modified;
                 await _context.SaveChangesAsync();
+                return Ok(project);
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!_context.Projects.Any(p => p.Id == id))
-                    return NotFound();
+                if (!await _context.Projects.AnyAsync(p => p.Id == id))
+                    return NotFound("No se encontró el proyecto especificado.");
                 else
-                    throw;
+                    return StatusCode(500, "Error al actualizar el proyecto (concurrencia).");
             }
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         // DELETE: api/projects/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProject(int id)
         {
-            var project = await _context.Projects.FindAsync(id);
-            if (project == null)
-                return NotFound();
+            try
+            {
+                var project = await _context.Projects.FindAsync(id);
+                if (project == null)
+                    return NotFound("No se encontró el proyecto especificado.");
 
-            _context.Projects.Remove(project);
-            await _context.SaveChangesAsync();
+                _context.Projects.Remove(project);
+                await _context.SaveChangesAsync();
 
-            return NoContent();
+                return Ok("Proyecto eliminado correctamente.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
     }
 }
