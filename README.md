@@ -5,44 +5,110 @@ Su objetivo es servir como base sólida para proyectos personales, de portfolio 
 
 ---
 
-## 🚀 Tecnologías utilizadas
+## 🚀 Tecnologías principales
 
-- **.NET 8 Web API**
-- **Entity Framework Core** (ORM)
-- **SQL Server / SQLite**
-- **JWT Authentication**
-- **FluentValidation**
-- **AutoMapper**
-- **Swagger / OpenAPI**
-- **Serilog** (logging)
-- (Opcional) **Angular / React** como front-end // TODO
+| Capa               | Tecnologías                                           |
+| ------------------ | ----------------------------------------------------- |
+| **WebApi**         | .NET 8 Web API, Swagger, JWT (in progress)            |
+| **Application**    | FluentValidation, AutoMapper (in progress), Servicios |
+| **Infrastructure** | Entity Framework Core, Repositorios                   |
+| **Domain**         | Entidades y enums puros                               |
+
+Además:
+
+- Serilog (pendiente de integración)
+
+- SQLite / SQL Server como base de datos
+
+- Preparado para integrarse a frontends Angular o React
 
 ---
 
-## 🧱 Arquitectura del proyecto
+## 🧱 Arquitectura (Clean Architecture)
 
 El proyecto sigue los principios de **Clean Architecture** y separación por capas:
 
 ```
 
 TaskFlow
-├── TaskFlow.Domain # Entidades y enums base (User, Project, TaskItem)
-├── TaskFlow.Application # Casos de uso, DTOs, interfaces, validaciones
-├── TaskFlow.Infrastructure # Acceso a datos, EF Core, repositorios concretos
-└── TaskFlow.WebApi # Endpoints, autenticación, configuración general
+│
+├── TaskFlow.Domain
+│   └── Entidades puras (User, Project, TaskItem, enums)
+│
+├── TaskFlow.Application
+│   ├── Interfaces (Repos & Services)
+│   ├── Servicios de negocio independientes de infraestructura
+│   ├── Validators (FluentValidation
+│   └── DTOs & Mapping (pendiente)
+│
+├── TaskFlow.Infrastructure
+│   ├── AppDbContext (EF Core)
+│   ├── Repositorios concretos
+│   └── Configs de entidad (pendiente)
+│
+└── TaskFlow.WebApi
+    ├── Controllers
+    ├── Inyección de dependencias
+    ├── Middlewares (pendiente)
+    └── Auth (JWT en progreso)
 
 ```
-
-Cada capa depende solo de la capa inmediatamente inferior, garantizando independencia y mantenibilidad.
+✔ Las capas superiores nunca referencian WebApi ni Infrastructure <br>
+✔ Application conoce solo interfaces, no implementaciones <br>
+✔ Domain no depende de nadie
 
 ---
 
-## 📚 Entidades principales
+# 📚 Entidades principales
 
-- **User** → representa a un usuario registrado (almacena hash de contraseña)
-- **Project** → proyecto creado por un usuario
-- **TaskItem** → tareas asignadas a proyectos
-- **TaskStatus** → enum (`Todo`, `InProgress`, `Done`)
+### **User**
+
+* Id, Username, Email
+* PasswordHash (sin contraseña en texto plano)
+* Relación con proyectos
+
+### **Project**
+
+* Id, Name, Description
+* OwnerId
+* Lista de TaskItem
+
+### **TaskItem**
+
+* Id, Title, Description
+* ProjectId (FK)
+* Status (enum: Todo / InProgress / Done)
+
+---
+
+# ⚙️ Estado actual del proyecto
+
+### ✔ Domain completo
+
+### ✔ Repositorios creados
+
+### ✔ Servicios con validación
+
+### ✔ FluentValidation funcionando en Application
+
+### ✔ WebApi consumiendo servicios en lugar de DbContext
+
+### ✔ Arquitectura limpia sin ciclos de dependencia
+
+### ✔ AutoMapper + DTOs
+
+### 🔄 En progreso
+
+* JWT Authentication
+* Logs con Serilog
+* Configs de EF Core en carpeta **Configurations**
+* Manejo de excepciones global (Middleware)
+
+### 🧩 Pendiente
+
+* Tests unitarios (xUnit)
+* Documentación avanzada en Swagger
+* Dockerfile + docker-compose
 
 ---
 
@@ -86,13 +152,45 @@ Podés explorar los endpoints en:
 
 ---
 
-## 🔐 Próximos pasos
+# 🧰 Estructura de carpetas (real)
 
-- Implementar **AppDbContext** con EF Core
-- Configurar **JWT Authentication**
-- Crear controladores de **Users**, **Projects** y **Tasks**
-- Agregar **Swagger y AutoMapper**
-- Desplegar con **Docker** o **Azure App Service**
+```
+TaskFlow
+│
+├── TaskFlow.Domain
+│   ├── Entities/
+│   └── Enums/
+│
+├── TaskFlow.Application
+│   ├── Interfaces
+│   │     ├──Repositories/
+│   │     └──Services/
+│   ├── Services/
+│   ├── Validators/
+│   ├── DTOs/ (pendiente)
+│   └── Mappings/ (pendiente)
+│
+├── TaskFlow.Infrastructure
+│   ├── Data/
+│   ├── Repositories/
+│   └── Configurations/ (pendiente)
+│
+└── TaskFlow.WebApi
+    ├── Controllers/
+    └── Program.cs (DI + Swagger)
+```
+
+---
+
+# 🔐 Próximos pasos (Roadmap)
+
+* [ ] Implementar JWT completo (Login + Register + Claims)
+* [ ] Agregar manejo de excepciones global
+* [ ] Logs estructurados con Serilog
+* [ ] Tests unitarios
+* [ ] Dockerización
+* [ ] Mejorar documentación Swagger
+* [ ] Crear un Frontend (Angular)
 
 ---
 
