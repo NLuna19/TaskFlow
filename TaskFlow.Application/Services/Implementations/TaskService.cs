@@ -1,72 +1,59 @@
-﻿using TaskFlow.Domain.Entities;
-using TaskFlow.Infrastructure.Data;
+﻿using FluentValidation;
+using TaskFlow.Domain.Entities;
 using TaskFlow.Application.Services.Interfaces;
-using Microsoft.EntityFrameworkCore;
+using TaskFlow.Application.Interfaces.Repositories;
 
-namespace TaskFlow.Application.Services.Implementations
+namespace TaskFlow.Application.Services.Implementations;
+
+public class TaskService : ITaskService
 {
-    public class TaskService : ITaskService
+    private readonly ITaskRepository _repository;
+    private readonly IValidator<TaskItem> _validator;
+
+    public TaskService(ITaskRepository repository, IValidator<TaskItem> validator)
     {
-        private readonly AppDbContext _context;
+        _repository = repository;
+        _validator = validator;
+    }
 
-        public TaskService(AppDbContext context)
-        {
-            _context = context;
-        }
+    public async Task<IEnumerable<TaskItem>> GetAllAsync()
+    {
+        return await _repository.GetAllAsync();
+    }
 
-        public async Task<IEnumerable<TaskItem>> GetAllAsync()
-        {
-            return await _context.Tasks
-                .AsNoTracking()
-                .ToListAsync();
-        }
+    public async Task<TaskItem?> GetByIdAsync(int id)
+    {
+        return await _repository.GetByIdAsync(id);
+    }
 
-        public async Task<TaskItem?> GetByIdAsync(int id)
-        {
-            return await _context.Tasks
-                .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Id == id);
-        }
+    public async Task<TaskItem> CreateAsync(TaskItem task)
+    {
+        var validation = await _validator.ValidateAsync(task);
 
-        public async Task<TaskItem> CreateAsync(TaskItem task)
-        {
-            // Basic domain validation
-            if (string.IsNullOrWhiteSpace(task.Title))
-                throw new ArgumentException("Title is required.");
-            // (Título es obligatorio)
+        if (!validation.IsValid)
+            throw new ValidationException(
+                "Invalid task data", // Datos de la tarea inválidos
+                validation.Errors
+            );
 
-            _context.Tasks.Add(task);
-            await _context.SaveChangesAsync();
+        return await _repository.CreateAsync(task);
+    }
 
-            return task;
-        }
+    public async Task<bool> UpdateAsync(TaskItem task)
+    {
+        var validation = await _validator.ValidateAsync(task);
 
-        public async Task<bool> UpdateAsync(TaskItem task)
-        {
-            var existing = await _context.Tasks.FindAsync(task.Id);
-            if (existing == null)
-                return false;
+        if (!validation.IsValid)
+            throw new ValidationException(
+                "Invalid task data", // Datos de la tarea inválidos
+                validation.Errors
+            );
 
-            // Basic domain validation
-            if (string.IsNullOrWhiteSpace(task.Title))
-                throw new ArgumentException("Title is required.");
-            // (Título es obligatorio)
+        return await _repository.UpdateAsync(task);
+    }
 
-            // Update values
-            _context.Entry(existing).CurrentValues.SetValues(task);
-
-            return await _context.SaveChangesAsync() > 0;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var task = await _context.Tasks.FindAsync(id);
-            if (task == null)
-                return false;
-
-            _context.Tasks.Remove(task);
-
-            return await _context.SaveChangesAsync() > 0;
-        }
+    public async Task<bool> DeleteAsync(int id)
+    {
+        return await _repository.DeleteAsync(id);
     }
 }

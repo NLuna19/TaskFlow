@@ -1,77 +1,59 @@
-﻿using Microsoft.EntityFrameworkCore;
-using TaskFlow.Application.Services.Interfaces;
+﻿using FluentValidation;
 using TaskFlow.Domain.Entities;
-using TaskFlow.Infrastructure.Data;
+using TaskFlow.Application.Services.Interfaces;
+using TaskFlow.Application.Interfaces.Repositories;
 
-namespace TaskFlow.Application.Services.Implementations
+namespace TaskFlow.Application.Services.Implementations;
+
+public class ProjectService : IProjectService
 {
-    public class ProjectService : IProjectService
+    private readonly IProjectRepository _repository;
+    private readonly IValidator<Project> _validator;
+
+    public ProjectService(IProjectRepository repository, IValidator<Project> validator)
     {
-        private readonly AppDbContext _context;
+        _repository = repository;
+        _validator = validator;
+    }
 
-        public ProjectService(AppDbContext context)
-        {
-            _context = context;
-        }
+    public async Task<IEnumerable<Project>> GetAllAsync()
+    {
+        return await _repository.GetAllAsync();
+    }
 
-        public async Task<IEnumerable<Project>> GetAllAsync()
-        {
-            return await _context.Projects
-                .AsNoTracking()
-                .ToListAsync();
-        }
+    public async Task<Project?> GetByIdAsync(int id)
+    {
+        return await _repository.GetByIdAsync(id);
+    }
 
-        public async Task<Project?> GetByIdAsync(int id)
-        {
-            return await _context.Projects
-                .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.Id == id);
-        }
+    public async Task<Project> CreateAsync(Project project)
+    {
+        var validation = await _validator.ValidateAsync(project);
 
-        public async Task<Project> CreateAsync(Project project)
-        {
-            // Domain validation
-            if (string.IsNullOrWhiteSpace(project.Name))
-                throw new ArgumentException("Project name is required.");
-            // (El nombre del proyecto es obligatorio)
+        if (!validation.IsValid)
+            throw new ValidationException(
+                "Invalid project data", // Datos del proyecto inválidos
+                validation.Errors
+            );
 
-            if (string.IsNullOrWhiteSpace(project.Description))
-                throw new ArgumentException("Project description is required.");
-            // (La descripción es obligatoria)
+        return await _repository.CreateAsync(project);
+    }
 
-            _context.Projects.Add(project);
-            await _context.SaveChangesAsync();
+    public async Task<bool> UpdateAsync(Project project)
+    {
+        var validation = await _validator.ValidateAsync(project);
 
-            return project;
-        }
+        if (!validation.IsValid)
+            throw new ValidationException(
+                "Invalid project data", // Datos del proyecto inválidos
+                validation.Errors
+            );
 
-        public async Task<bool> UpdateAsync(Project project)
-        {
-            var existing = await _context.Projects.FindAsync(project.Id);
-            if (existing == null)
-                return false;
+        return await _repository.UpdateAsync(project);
+    }
 
-            // Domain validation
-            if (string.IsNullOrWhiteSpace(project.Name))
-                throw new ArgumentException("Project name is required.");
-
-            if (string.IsNullOrWhiteSpace(project.Description))
-                throw new ArgumentException("Project description is required.");
-
-            // Apply changes cleanly
-            _context.Entry(existing).CurrentValues.SetValues(project);
-
-            return await _context.SaveChangesAsync() > 0;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var project = await _context.Projects.FindAsync(id);
-            if (project == null)
-                return false;
-
-            _context.Projects.Remove(project);
-            return await _context.SaveChangesAsync() > 0;
-        }
+    public async Task<bool> DeleteAsync(int id)
+    {
+        return await _repository.DeleteAsync(id);
     }
 }

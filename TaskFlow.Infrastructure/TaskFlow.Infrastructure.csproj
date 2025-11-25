@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-	  <Folder Include="Repositories\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10">
       <PrivateAssets>all</PrivateAssets>
@@ -20,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TaskFlow.Application\TaskFlow.Application.csproj" />
-    <ProjectReference Include="..\TaskFlow.Domain\TaskFlow.Domain.csproj" />
+	  <ProjectReference Include="..\TaskFlow.Domain\TaskFlow.Domain.csproj" />
+	  <ProjectReference Include="..\TaskFlow.Application\TaskFlow.Application.csproj" />
   </ItemGroup>
 
 </Project>
