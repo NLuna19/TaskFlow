@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TaskFlow.Infrastructure.Data;
+using TaskFlow.Application.Services.Interfaces;
 using TaskFlow.Domain.Entities;
 
 namespace TaskFlow.WebApi.Controllers
@@ -9,11 +8,11 @@ namespace TaskFlow.WebApi.Controllers
     [ApiController]
     public class TasksController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly ITaskService _taskService;
 
-        public TasksController(AppDbContext context)
+        public TasksController(ITaskService taskService)
         {
-            _context = context;
+            _taskService = taskService;
         }
 
         // GET: api/tasks
@@ -22,33 +21,36 @@ namespace TaskFlow.WebApi.Controllers
         {
             try
             {
-                var tasks = await _context.Tasks.ToListAsync();
+                var tasks = await _taskService.GetAllAsync();
                 return Ok(tasks);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error interno: {ex.Message}");
+                // "Error interno" 
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        // GET: api/tasks/5
+        // GET: api/tasks/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<TaskItem>> GetTask(int id)
         {
             try
             {
-                var task = await _context.Tasks
-                    .Include(t => t.Project)
-                    .FirstOrDefaultAsync(t => t.Id == id);
+                var task = await _taskService.GetByIdAsync(id);
 
                 if (task == null)
-                    return NotFound("La tarea no existe.");
+                {
+                    // "La tarea no existe."
+                    return NotFound("Task not found.");
+                }
 
                 return Ok(task);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error interno: {ex.Message}");
+                // "Error interno"
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
@@ -58,68 +60,75 @@ namespace TaskFlow.WebApi.Controllers
         {
             try
             {
-                // Validamos que el Project exista
-                var projectExists = await _context.Projects.AnyAsync(p => p.Id == taskItem.ProjectId);
-                if (!projectExists)
-                    return BadRequest("El proyecto asociado no existe.");
+                var created = await _taskService.CreateAsync(taskItem);
 
-                _context.Tasks.Add(taskItem);
-                await _context.SaveChangesAsync();
-
-                return CreatedAtAction(nameof(GetTask), new { id = taskItem.Id }, taskItem);
+                return CreatedAtAction(
+                    nameof(GetTask),
+                    new { id = created.Id },
+                    created
+                );
+            }
+            catch (ArgumentException ex)
+            {
+                // "El proyecto asociado no existe."
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error interno: {ex.Message}");
+                // "Error interno"
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        // PUT: api/tasks/5
+        // PUT: api/tasks/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTask(int id, TaskItem taskItem)
         {
             if (id != taskItem.Id)
-                return BadRequest("El ID de la tarea no coincide.");
+            {
+                // "El ID de la tarea no coincide"
+                return BadRequest("Task ID does not match.");
+            }
 
             try
             {
-                // Validamos existencia
-                if (!await _context.Tasks.AnyAsync(t => t.Id == id))
-                    return NotFound("La tarea no existe.");
+                var updated = await _taskService.UpdateAsync(taskItem);
 
-                _context.Entry(taskItem).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
+                if (!updated)
+                {
+                    // "La tarea no existe."
+                    return NotFound("Task not found.");
+                }
 
-                return Ok("Tarea actualizada correctamente.");
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return StatusCode(500, "Error de concurrencia al actualizar la tarea.");
+                return Ok("Task updated successfully.");
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error interno: {ex.Message}");
+                // "Error interno"
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        // DELETE: api/tasks/5
+        // DELETE: api/tasks/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
             try
             {
-                var task = await _context.Tasks.FindAsync(id);
-                if (task == null)
-                    return NotFound("La tarea no existe.");
+                var deleted = await _taskService.DeleteAsync(id);
 
-                _context.Tasks.Remove(task);
-                await _context.SaveChangesAsync();
+                if (!deleted)
+                {
+                    // "La tarea no existe."
+                    return NotFound("Task not found.");
+                }
 
-                return Ok("Tarea eliminada correctamente.");
+                return Ok("Task deleted successfully.");
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error interno: {ex.Message}");
+                // "Error interno"
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
     }

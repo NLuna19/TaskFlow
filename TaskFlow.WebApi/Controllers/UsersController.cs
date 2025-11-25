@@ -1,9 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
-using System.Text;
+using TaskFlow.Application.Services.Interfaces;
 using TaskFlow.Domain.Entities;
-using TaskFlow.Infrastructure.Data;
 
 namespace TaskFlow.WebApi.Controllers
 {
@@ -11,20 +8,11 @@ namespace TaskFlow.WebApi.Controllers
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IUserService _userService;
 
-        public UsersController(AppDbContext context)
+        public UsersController(IUserService userService)
         {
-            _context = context;
-        }
-
-        // function generar hash con SHA256 
-        // TODO change to a more secure hashing algorithm with salt like BCrypt, Identity o JWT
-        private string HashPassword(string password)
-        {
-            using var sha = SHA256.Create();
-            var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(password));
-            return BitConverter.ToString(bytes).Replace("-", "").ToLower();
+            _userService = userService;
         }
 
         // GET: api/users
@@ -33,31 +21,36 @@ namespace TaskFlow.WebApi.Controllers
         {
             try
             {
-                var users = await _context.Users.ToListAsync();
+                var users = await _userService.GetAllAsync();
                 return Ok(users);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error interno: {ex.Message}");
+                // "Error interno"
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        // GET: api/users/5
+        // GET: api/users/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<User>> GetUser(int id)
         {
             try
             {
-                var user = await _context.Users.FindAsync(id);
+                var user = await _userService.GetByIdAsync(id);
 
                 if (user == null)
-                    return NotFound("El usuario no existe.");
+                {
+                    // "El usuario no existe."
+                    return NotFound("User not found.");
+                }
 
                 return Ok(user);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error interno: {ex.Message}");
+                // "Error interno"
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
@@ -67,73 +60,75 @@ namespace TaskFlow.WebApi.Controllers
         {
             try
             {
-                // Validación de email único
-                var emailExists = await _context.Users.AnyAsync(u => u.Email == user.Email);
-                if (emailExists)
-                    return BadRequest("Ya existe un usuario registrado con ese email.");
+                var created = await _userService.CreateAsync(user);
 
-                // Hash de password
-                user.PasswordHash = HashPassword(user.PasswordHash);
-
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
-
-                return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
+                return CreatedAtAction(
+                    nameof(GetUser),
+                    new { id = created.Id },
+                    created
+                );
+            }
+            catch (ArgumentException ex)
+            {
+                // "Ya existe un usuario con ese email."
+                return BadRequest(ex.Message);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error interno: {ex.Message}");
+                // "Error interno"
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        // PUT: api/users/5
+        // PUT: api/users/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateUser(int id, User user)
         {
             if (id != user.Id)
-                return BadRequest("El ID no coincide.");
+            {
+                // "El ID no coincide."
+                return BadRequest("User ID does not match.");
+            }
 
             try
             {
-                if (!await _context.Users.AnyAsync(u => u.Id == id))
-                    return NotFound("El usuario no existe.");
+                var updated = await _userService.UpdateAsync(user);
 
-                // Si viene PasswordHash, la rehasheamos
-                user.PasswordHash = HashPassword(user.PasswordHash);
+                if (!updated)
+                {
+                    // "El usuario no existe."
+                    return NotFound("User not found.");
+                }
 
-                _context.Entry(user).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-
-                return Ok("Usuario actualizado correctamente.");
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return StatusCode(500, "Error de concurrencia al actualizar.");
+                return Ok("User updated successfully.");
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error interno: {ex.Message}");
+                // "Error interno"
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
-        // DELETE: api/users/5
+        // DELETE: api/users/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
             try
             {
-                var user = await _context.Users.FindAsync(id);
-                if (user == null)
-                    return NotFound("El usuario no existe.");
+                var deleted = await _userService.DeleteAsync(id);
 
-                _context.Users.Remove(user);
-                await _context.SaveChangesAsync();
+                if (!deleted)
+                {
+                    // "El usuario no existe."
+                    return NotFound("User not found.");
+                }
 
-                return Ok("Usuario eliminado correctamente.");
+                return Ok("User deleted successfully.");
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Error interno: {ex.Message}");
+                // "Error interno"
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
     }
