@@ -8,7 +8,6 @@
 
   <ItemGroup>
 	  <Folder Include="Interfaces\" />
-	  <Folder Include="Services\" />
 	  <Folder Include="DTOs\" />
 	  <Folder Include="Mappings\" />
 	  <Folder Include="Validators\" />
@@ -16,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TaskFlow.Domain\TaskFlow.Domain.csproj" />
+	  <ProjectReference Include="..\TaskFlow.Infrastructure\TaskFlow.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

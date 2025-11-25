@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using TaskFlow.Infrastructure.Data;
+using TaskFlow.Application.Services.Interfaces;
 using TaskFlow.Domain.Entities;
 
 namespace TaskFlow.WebApi.Controllers
@@ -9,11 +9,11 @@ namespace TaskFlow.WebApi.Controllers
     [ApiController]
     public class ProjectsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IProjectService _projectService;
 
-        public ProjectsController(AppDbContext context)
+        public ProjectsController(IProjectService projectService)
         {
-            _context = context;
+            _projectService = projectService;
         }
 
         // GET: api/projects
@@ -22,12 +22,13 @@ namespace TaskFlow.WebApi.Controllers
         {
             try
             {
-                var projects = await _context.Projects.ToListAsync();
+                var projects = await _projectService.GetAllAsync();
                 return Ok(projects);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Internal service error: {ex.Message}");
+                // Error interno del servidor
+                return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
 
@@ -37,19 +38,21 @@ namespace TaskFlow.WebApi.Controllers
         {
             try
             {
-                var project = await _context.Projects
-                 .Include(p => p.Tasks)
-                 .FirstOrDefaultAsync(p => p.Id == id);
+                var project = await _projectService.GetByIdAsync(id);
 
                 if (project == null)
-                    return NotFound();
-                 return Ok(project);
+                {
+                    // No se encontró el proyecto
+                    return NotFound("Project not found.");
+                }
+
+                return Ok(project);
             }
             catch (Exception ex)
             {
+                // Error interno del servidor
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
-
         }
 
         // POST: api/projects
@@ -58,12 +61,17 @@ namespace TaskFlow.WebApi.Controllers
         {
             try
             {
-                _context.Projects.Add(project);
-                await _context.SaveChangesAsync();
-                return Ok(project);
+                var created = await _projectService.CreateAsync(project);
+                // Return 201 Created + Location header pointing to GetProject
+                return CreatedAtAction(
+                    nameof(GetProject),          // Action to route to (GetProject method)
+                    new { id = created.Id },     // Route values
+                    created                      // Response body
+                );
             }
             catch (Exception ex)
             {
+                // Error interno al crear el proyecto
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -73,23 +81,26 @@ namespace TaskFlow.WebApi.Controllers
         public async Task<IActionResult> PutProject(int id, Project project)
         {
             if (id != project.Id)
-                return BadRequest("El ID del proyecto no coincide.");
+            {
+                // El ID no coincide
+                return BadRequest("Project ID does not match.");
+            }
 
             try
             {
-                _context.Entry(project).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
+                var success = await _projectService.UpdateAsync(project);
+
+                if (!success)
+                {
+                    // Proyecto no encontrado
+                    return NotFound("Project not found.");
+                }
+
                 return Ok(project);
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await _context.Projects.AnyAsync(p => p.Id == id))
-                    return NotFound("No se encontró el proyecto especificado.");
-                else
-                    return StatusCode(500, "Error al actualizar el proyecto (concurrencia).");
             }
             catch (Exception ex)
             {
+                // Error interno al actualizar
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -100,17 +111,19 @@ namespace TaskFlow.WebApi.Controllers
         {
             try
             {
-                var project = await _context.Projects.FindAsync(id);
-                if (project == null)
-                    return NotFound("No se encontró el proyecto especificado.");
+                var success = await _projectService.DeleteAsync(id);
 
-                _context.Projects.Remove(project);
-                await _context.SaveChangesAsync();
+                if (!success)
+                {
+                    // No se encontró el proyecto
+                    return NotFound("Project not found.");
+                }
 
-                return Ok("Proyecto eliminado correctamente.");
+                return Ok("Project deleted successfully.");
             }
             catch (Exception ex)
             {
+                // Error interno al eliminar
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
